@@ -207,7 +207,7 @@
     }
 
     function render(gender, lunar, pY, pM, pD, pH, hVal) {
-        const titles = ["年宮 (父母 / 幼年)", "月宮 (事業交友 / 青年)", "日宮 (夫妻 / 中年)", "時宮 (命宮子女 / 晚年)"];
+        const titles = ["年宮 (父母 / 幼年)", "月宮 (兄弟 / 青年)", "日宮 (夫妻 / 中年)", "時宮 (命宮 / 晚年)"];
         const posArr = [pY, pM, pD]; if (pH !== null) posArr.push(pH);
         let html = '';
         posArr.forEach((pos, i) => {
@@ -231,3 +231,4 @@
 </script>
 </body>
 </html>
+
