@@ -26,22 +26,23 @@
 
         label.title { display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 0.9em; }
         
-        /* 二選一日期切換 */
+        /* 國曆/農曆切換 */
         .date-type-group { display: flex; gap: 5px; margin-bottom: 12px; }
         .date-type-btn { flex: 1; padding: 10px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; text-align: center; background: #fff; font-size: 1em; font-weight: bold; }
         .date-type-btn.active { background: #666; color: #fff; border-color: #666; }
 
+        /* 西元/民國切換 (僅國曆顯示) */
+        .era-type-group { display: flex; gap: 5px; margin-bottom: 10px; justify-content: flex-end; }
+        .era-btn { padding: 4px 12px; font-size: 0.8em; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; background: #fff; color: #888; }
+        .era-btn.active { border-color: #e67e22; color: #e67e22; background: #fff9f0; }
+
         input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; margin-bottom: 12px; }
-        
-        /* 手動數字輸入佈局 */
         .multi-input-group { display: flex; gap: 5px; margin-bottom: 5px; }
-        .multi-input-group input { flex: 2; } /* 年份佔比多一點 */
+        .multi-input-group input { flex: 2; }
         .multi-input-group select { flex: 1.5; }
         
         #leap-wrap { font-size: 0.85em; color: #c0392b; font-weight: bold; margin-bottom: 10px; }
-        
         button#calc-btn { width: 100%; padding: 14px; background: var(--primary-color); color: white; border: none; border-radius: 6px; font-size: 1.1em; cursor: pointer; font-weight: bold; transition: 0.2s; margin-top: 10px; }
-        button#calc-btn:active { transform: scale(0.98); }
         
         /* 垂直結果呈現 */
         #result { display: none; margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px; }
@@ -49,15 +50,12 @@
         .card { width: 100%; border: 1px solid #e0e0e0; padding: 18px; border-radius: 10px; background: #fff; box-sizing: border-box; }
         .card.forward { border-left: 5px solid #2980b9; }
         .card.reverse { border-left: 5px solid #8e44ad; }
-        
         .arrow { height: 25px; width: 2px; background: var(--arrow-color); position: relative; margin: 5px 0; }
         .arrow::after { content: '▼'; position: absolute; bottom: -10px; left: -6px; color: var(--arrow-color); font-size: 12px; }
-
         .card h4 { margin: 0 0 8px 0; color: #888; font-size: 0.85em; letter-spacing: 1px; }
         .star { font-size: 1.4em; font-weight: bold; color: var(--primary-color); margin-bottom: 4px; }
         .dao { font-size: 0.95em; color: #2980b9; font-weight: bold; margin-bottom: 8px; }
         .description { font-size: 0.9em; color: #666; line-height: 1.5; }
-
         .lunar-info { text-align: center; background: #fff9db; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9em; line-height: 1.6; border: 1px solid #f1e09a; }
         .roc-text { color: #e67e22; font-weight: bold; }
     </style>
@@ -70,12 +68,8 @@
     <div class="input-section">
         <label class="title">性別</label>
         <div class="gender-group">
-            <label class="gender-option active-male" id="label-male">
-                <input type="radio" name="gender" value="male" checked onclick="updateUIState()"> 男
-            </label>
-            <label class="gender-option" id="label-female">
-                <input type="radio" name="gender" value="female" onclick="updateUIState()"> 女
-            </label>
+            <label class="gender-option active-male" id="label-male"><input type="radio" name="gender" value="male" checked onclick="updateUI()"> 男</label>
+            <label class="gender-option" id="label-female"><input type="radio" name="gender" value="female" onclick="updateUI()"> 女</label>
         </div>
 
         <label class="title">出生日期方式</label>
@@ -84,15 +78,18 @@
             <div class="date-type-btn" id="btn-lunar" onclick="toggleDateMode('lunar')">農曆</div>
         </div>
 
+        <div class="era-type-group" id="era-group">
+            <div class="era-btn active" id="era-ad" onclick="toggleEra('ad')">西元</div>
+            <div class="era-btn" id="era-roc" onclick="toggleEra('roc')">民國</div>
+        </div>
+
         <div class="multi-input-group">
             <input type="number" id="inYear" placeholder="年份" value="1995">
             <select id="inMonth"></select>
             <select id="inDay"></select>
         </div>
 
-        <div id="leap-wrap" style="display: none;">
-            <label><input type="checkbox" id="isLeap" style="width: auto; vertical-align: middle;"> 是閏月</label>
-        </div>
+        <div id="leap-wrap" style="display: none;"><label><input type="checkbox" id="isLeap"> 是閏月</label></div>
         
         <label class="title" style="margin-top: 5px;">出生時辰</label>
         <select id="birthHour">
@@ -115,77 +112,81 @@
 </div>
 
 <script>
-    // 初始化月份與日期
     const mSelect = document.getElementById('inMonth');
     for(let m=1; m<=12; m++) mSelect.add(new Option(m + " 月", m));
     const dSelect = document.getElementById('inDay');
     for(let d=1; d<=31; d++) dSelect.add(new Option(d + " 日", d));
 
     let currentDateMode = 'solar'; 
+    let currentEraMode = 'ad'; 
 
     function toggleDateMode(mode) {
         currentDateMode = mode;
         document.getElementById('btn-solar').className = 'date-type-btn' + (mode === 'solar' ? ' active' : '');
         document.getElementById('btn-lunar').className = 'date-type-btn' + (mode === 'lunar' ? ' active' : '');
-        
-        // 只有農曆顯示閏月選項
+        document.getElementById('era-group').style.display = (mode === 'solar' ? 'flex' : 'none');
         document.getElementById('leap-wrap').style.display = (mode === 'lunar' ? 'block' : 'none');
         
-        // 變更年份輸入框的提示
         const yearInput = document.getElementById('inYear');
         if (mode === 'solar') {
-            yearInput.placeholder = "西元年 (1995)";
+            yearInput.value = (currentEraMode === 'ad' ? 1995 : 84);
+            yearInput.placeholder = (currentEraMode === 'ad' ? "西元" : "民國");
         } else {
-            yearInput.placeholder = "農曆年 (1995)";
+            yearInput.value = 1995;
+            yearInput.placeholder = "農曆年";
         }
     }
 
-    function updateUIState() {
+    function toggleEra(era) {
+        currentEraMode = era;
+        document.getElementById('era-ad').className = 'era-btn' + (era === 'ad' ? ' active' : '');
+        document.getElementById('era-roc').className = 'era-btn' + (era === 'roc' ? ' active' : '');
+        document.getElementById('inYear').placeholder = (era === 'ad' ? "西元" : "民國");
+        document.getElementById('inYear').value = (era === 'ad' ? 1995 : 84);
+    }
+
+    function updateUI() {
         const g = document.querySelector('input[name="gender"]:checked').value;
         document.getElementById('label-male').className = 'gender-option' + (g==='male'?' active-male':'');
         document.getElementById('label-female').className = 'gender-option' + (g==='female'?' active-female':'');
     }
 
     const STARS = [
-        { n: "天貴星", d: "佛道", desc: "志氣不凡，富貴清高。" },
-        { n: "天厄星", d: "鬼道", desc: "運蹇時乖，多災多難。" },
-        { n: "天權星", d: "人道", desc: "機智權謀，處事果斷。" },
-        { n: "天破星", d: "畜道", desc: "財來財去，易成易敗。" },
-        { n: "天奸星", d: "修羅", desc: "聰明機變，心思細密。" },
-        { n: "天文星", d: "仙道", desc: "博學多才，氣質儒雅。" },
-        { n: "天福星", d: "佛道", desc: "一生福厚，貴人相助。" },
-        { n: "天驛星", d: "鬼道", desc: "離祖成家，奔波勞碌。" },
-        { n: "天孤星", d: "人道", desc: "孤癖清高，六親少靠。" },
-        { n: "天刃星", d: "畜道", desc: "剛強正直，易招是非。" },
-        { n: "天藝星", d: "修羅", desc: "多才多藝，技術成名。" },
-        { n: "天壽星", d: "仙道", desc: "長壽安康，為人和藹。" }
+        { n: "天貴星", d: "佛道", desc: "志氣不凡，富貴清高。一生得貴人提拔，處事大方。" },
+        { n: "天厄星", d: "鬼道", desc: "運蹇時乖，謀事難成。早年較辛苦，需經歷磨練方能有成。" },
+        { n: "天權星", d: "人道", desc: "聰明機智，做事有權。具領導才能，性格果斷，中年有權。" },
+        { n: "天破星", d: "畜道", desc: "財來財去，祖業難守。財帛不聚，適合異鄉發展，白手起家。" },
+        { n: "天奸星", d: "修羅", desc: "聰明巧詐，思慮過多。智慧極高但心思較重，容易糾結焦慮。" },
+        { n: "天文星", d: "仙道", desc: "學問淵博，技藝超群。愛好學習，文采出眾，氣質儒雅優雅。" },
+        { n: "天福星", d: "佛道", desc: "一生福厚，衣食無憂。命帶福氣，處處逢凶化吉，晚年清閒。" },
+        { n: "天驛星", d: "鬼道", desc: "離祖成家，奔波勞碌。一生多變動，適合往外地發展，不宜守舊。" },
+        { n: "天孤星", d: "人道", desc: "孤癖清高，六親少靠。性格獨立，內心世界豐富，喜歡安靜思考。" },
+        { n: "天刃星", d: "畜道", desc: "剛強正直，易招是非。為人仗義火爆，須注意情緒管理及血光。" },
+        { n: "天藝星", d: "修羅", desc: "多才多藝，心靈手巧。技術流人才，能在某種專長領域發光發亮。" },
+        { n: "天壽星", d: "仙道", desc: "為人和藹，長壽安康。性格淡泊，不與人爭，晚年福壽雙全。" }
     ];
     const ZHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
 
     function calculate() {
         const gender = document.querySelector('input[name="gender"]:checked').value;
         const hVal = document.getElementById('birthHour').value;
-        const y = parseInt(document.getElementById('inYear').value);
+        let y = parseInt(document.getElementById('inYear').value);
         const m = parseInt(document.getElementById('inMonth').value);
         const d = parseInt(document.getElementById('inDay').value);
         const isLeap = document.getElementById('isLeap').checked;
 
         if(!y) return alert("請輸入出生年份");
+        if(currentDateMode === 'solar' && currentEraMode === 'roc') y += 1911;
 
         let lunar;
         try {
-            if (currentDateMode === 'solar') {
-                lunar = Solar.fromYmd(y, m, d).getLunar();
-            } else {
-                lunar = Lunar.fromYmd(y, m * (isLeap ? -1 : 1), d);
-            }
-        } catch(e) { return alert("日期無效，請檢查後再試"); }
+            if (currentDateMode === 'solar') { lunar = Solar.fromYmd(y, m, d).getLunar(); }
+            else { lunar = Lunar.fromYmd(y, m * (isLeap ? -1 : 1), d); }
+        } catch(e) { return alert("日期無效"); }
 
         const solar = lunar.getSolar();
         const step = (gender === 'male' ? 1 : -1);
-        const lyIdx = ZHI.indexOf(lunar.getYearZhi());
-
-        const pY = lyIdx;
+        const pY = ZHI.indexOf(lunar.getYearZhi());
         const pM = (pY + step * (lunar.getMonth() - 1) + 120) % 12;
         const pD = (pM + step * (lunar.getDay() - 1) + 120) % 12;
         let pH = (hVal === "none") ? null : (pD + step * parseInt(hVal) + 120) % 12;
@@ -197,26 +198,20 @@
         const titles = ["年宮 (父母 / 根基)", "月宮 (事業 / 中運)", "日宮 (夫妻 / 身宮)", "時宮 (子女 / 晚運)"];
         const posArr = [pY, pM, pD];
         if (pH !== null) posArr.push(pH);
-
         let html = '';
         posArr.forEach((pos, i) => {
-            const s = STARS[pos];
             html += `<div class="card ${gender==='male'?'forward':'reverse'}">
                 <h4>${titles[i]}</h4>
-                <div class="star">${ZHI[pos]} · ${s.n}</div>
-                <div class="dao">六道：${s.d}</div>
-                <div class="description">${s.desc}</div>
+                <div class="star">${ZHI[pos]} · ${STARS[pos].n}</div>
+                <div class="dao">六道：${STARS[pos].d}</div>
+                <div class="description">${STARS[pos].desc}</div>
             </div>`;
             if (i < posArr.length - 1) html += `<div class="arrow"></div>`;
         });
-
         const rocYear = solar.getYear() - 1911;
-        const timeStr = (hVal === "none") ? "時辰不詳" : ZHI[parseInt(hVal)] + "時";
-
         document.getElementById('lunar-display').innerHTML = 
             `國曆：${solar.toYmd()} <span class="roc-text">(民國 ${rocYear} 年 · 屬${lunar.getYearShengXiao()})</span><br>` +
-            `<b>農曆：${lunar.getYearInGanZhi()}年 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()} (${timeStr})</b>`;
-        
+            `<b>農曆：${lunar.getYearInGanZhi()}年 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()} (${hVal==="none"?"時辰不詳":ZHI[parseInt(hVal)]+"時"})</b>`;
         document.getElementById('flow-container').innerHTML = html;
         document.getElementById('result').style.display = 'block';
         window.scrollTo({ top: document.getElementById('result').offsetTop - 20, behavior: 'smooth' });
