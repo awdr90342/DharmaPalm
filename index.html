@@ -126,7 +126,7 @@
         { n: "天貴星", d: "佛道", desc: "志氣不凡，富貴清高。一生得貴人提拔，處事大方。" },
         { n: "天厄星", d: "鬼道", desc: "運蹇時乖，謀事難成。早年較辛苦，需經歷磨練方能有成。" },
         { n: "天權星", d: "人道", desc: "聰明機智，做事有權。具領導才能，性格果斷，中年有權。" },
-        { n: "天破星", d: "畜道", desc: "財來財去，祖業難守。財帛不聚，適合異鄉發展，白手起家。" },
+        { n: "天破星", d: "畜道", desc: "財來財去，祖業難守。財帛不聚，適合異鄉發展，白白白起家。" },
         { n: "天奸星", d: "修羅", desc: "聰明巧詐，思慮過多。智慧極高但心思較重，容易糾結焦慮。" },
         { n: "天文星", d: "仙道", desc: "學問淵博，技藝超群。愛好學習，文采出眾，氣質儒雅優雅。" },
         { n: "天福星", d: "佛道", desc: "一生福厚，衣食無憂。命帶福氣，處處逢凶化吉，晚年清閒。" },
@@ -161,21 +161,11 @@
         let ld = lunar.getDay();
         if (lm < 0) { lm = Math.abs(lm); if (ld > 15) lm += 1; }
         const pM = (pY + step * (lm - 1) + 120) % 12;
-        
-        // 日宮固定在出生當天
         const pD = (pM + step * (ld - 1) + 120) % 12;
 
-        // 時宮處理邏輯
         let pH = null;
         if (hVal !== "none") {
-            let hIdx;
-            if (hVal === "early-zi") {
-                hIdx = 0; // 早子：第四宮 = 第三宮
-            } else if (hVal === "late-zi") {
-                hIdx = 1; // 晚子：第四宮 = 第三宮往後一宮
-            } else {
-                hIdx = parseInt(hVal);
-            }
+            let hIdx = (hVal === "early-zi") ? 0 : (hVal === "late-zi") ? 1 : parseInt(hVal);
             pH = (pD + step * hIdx + 120) % 12;
         }
 
@@ -183,7 +173,13 @@
     }
 
     function render(gender, lunar, pY, pM, pD, pH, hVal) {
-        const titles = ["年宮 (父母 / 根基)", "月宮 (事業 / 中運)", "日宮 (夫妻 / 身宮)", "時宮 (子女 / 晚運)"];
+        // 依照要求更新術語
+        const titles = [
+            "年宮 (父母宮 / 幼年)", 
+            "月宮 (兄弟宮 / 青年)", 
+            "日宮 (夫妻宮 / 中年)", 
+            "時宮 (命宮 / 晚年)"
+        ];
         const posArr = [pY, pM, pD]; if (pH !== null) posArr.push(pH);
         let html = '';
         posArr.forEach((pos, i) => {
